@@ -1,0 +1,51 @@
+name: 🐛 问题报告
+description: 报告与预期不符的行为或运行错误。
+title: "[问题] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你的反馈。请尽量填写完整信息，以便复现和修复。
+        **安全漏洞不要提交到公开 Issue，请按照 SECURITY.md 的私密流程报告。**
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已经搜索过，没有找到相同问题。
+          required: true
+        - label: 我只在自有、明确授权或本地隔离环境中复现了问题。
+          required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 发生了什么
+      description: 请同时描述预期行为和实际行为。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 按顺序列出能够复现问题的步骤。
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志或截图
+      description: 请先遮盖 API 密钥、令牌、目标地址和个人数据。
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      placeholder: "例如：v0.1.1 或提交哈希"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 运行环境
+      placeholder: "例如：Windows 11 / Docker Compose / OpenAI"

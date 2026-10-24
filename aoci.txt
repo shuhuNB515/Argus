@@ -1,0 +1,8 @@
+#AOCI-ROOT-MANIFEST: 1
+#Format-Version: cognition-volumes/v1
+#Locale: zh-CN
+#Project: src-agent-artex-harness-v2
+#Generated-At: 2026-10-24T16:20:51.533981Z
+#Fingerprint: 467e238a07ce65945965803a3bb6056a31b435690b4b2ca373eee04268a2732b
+#Volume: id=meta kind=meta path=aoci.meta.txt format=meta-v1 depends=- state=enabled
+#Volume: id=code kind=code path=aoci.code.txt format=object-fras-v2 depends=meta state=enabled
