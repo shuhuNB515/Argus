@@ -1,7 +1,9 @@
 param([Parameter(Mandatory=$true)][string]$Installer)
 $ErrorActionPreference = 'Stop'
 $root = Join-Path $env:RUNNER_TEMP ('Argus 中文安装 ' + [guid]::NewGuid().ToString())
-$env:LOCALAPPDATA = Join-Path $root '用户数据'
+# Keep data under the Windows user profile, as on customer machines; the app
+# itself remains installed into a Unicode directory on the runner's work drive.
+$env:LOCALAPPDATA = Join-Path ([System.IO.Path]::GetTempPath()) ('Argus 用户数据 ' + [guid]::NewGuid().ToString())
 $install = Join-Path $root 'Application'
 $env:HTTP_PROXY = 'http://127.0.0.1:1'
 $env:HTTPS_PROXY = 'http://127.0.0.1:1'

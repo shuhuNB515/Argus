@@ -120,6 +120,10 @@ func OpenEmbedded(dataDir string) (*DB, error) {
 		return nil, fmt.Errorf("choose embedded database port: %w", err)
 	}
 	pgRoot := filepath.Join(dataDir, "database")
+	pgRoot, err = prepareEmbeddedRoot(pgRoot)
+	if err != nil {
+		return nil, err
+	}
 	cachePath := os.Getenv("ARGUS_POSTGRES_CACHE")
 	if cachePath == "" {
 		if exe, err := os.Executable(); err == nil {
