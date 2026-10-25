@@ -1,5 +1,6 @@
 param([Parameter(Mandatory=$true)][string]$Installer)
 $ErrorActionPreference = 'Stop'
+$env:ARGUS_POSTGRES_CACHE = $null
 $root = Join-Path $env:RUNNER_TEMP ('Argus 中文安装 ' + [guid]::NewGuid().ToString())
 # Keep data under the Windows user profile, as on customer machines; the app
 # itself remains installed into a Unicode directory on the runner's work drive.
@@ -12,6 +13,9 @@ $setup = Start-Process -FilePath $Installer -ArgumentList @('/S', "/D=$install")
 if ($setup.ExitCode -ne 0) { throw "Installer failed: $($setup.ExitCode)" }
 $exe = Join-Path $install 'argus.exe'
 if (-not (Test-Path $exe)) { throw 'Installed executable missing' }
+if (-not (Test-Path (Join-Path $install 'database-cache/embedded-postgres-binaries-windows-amd64-18.3.0.txz'))) {
+  throw 'Installed offline database runtime missing'
+}
 $process = Start-Process $exe -ArgumentList @('-open-browser=false', '-proxy=') -PassThru
 try {
   $ready = $false
