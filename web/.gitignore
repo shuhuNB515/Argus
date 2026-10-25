@@ -1,0 +1,42 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+*.sh
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# i18n — 产品. zh.json/ko.json 承诺，但是, 按键来源(文件:线) 索引是
+# 容量大，每次修改源码都会推送行数。 diff 通过摇动排除.
+# `npm run extract:i18n` 它可以随时重新生成(B2 接线·B3 翻译时使用).
+/messages/zh.sources.json

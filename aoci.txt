@@ -1,0 +1,8 @@
+#AOCI-ROOT-MANIFEST: 1
+#Format-Version: cognition-volumes/v1
+#Locale: zh-CN
+#Project: Argus
+#Generated-At: 2026-10-25T04:53:36.302111Z
+#Fingerprint: 6a4979a21c09ed01d019bd16a73031a31508110312a02406d19d8a1ac7bad2d9
+#Volume: id=meta kind=meta path=aoci.meta.txt format=meta-v1 depends=- state=enabled
+#Volume: id=code kind=code path=aoci.code.txt format=object-fras-v2 depends=meta state=enabled

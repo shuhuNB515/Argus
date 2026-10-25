@@ -1,0 +1,206 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # Required to create the release.
+
+jobs:
+  # ① Export the frontend once and reuse it for every platform build.
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm run build:static
+        working-directory: web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/out
+
+  # ② Linux/Windows cross compilation. macOS packages are built on macOS below
+  # so the release can include a real DMG.
+  binaries:
+    needs: frontend
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { goos: linux, goarch: amd64 }
+          - { goos: linux, goarch: arm64 }
+          - { goos: windows, goarch: amd64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: server/webui/dist
+      - name: Build and package with build.sh
+        env:
+          ARGUS_TARGET_OS: ${{ matrix.goos }}
+          ARGUS_TARGET_ARCH: ${{ matrix.goarch }}
+          ARGUS_BUILD_VERSION: ${{ github.ref_name }}
+          ARGUS_SKIP_FRONTEND: "1"
+          ARGUS_SKIP_NPM_CI: "1"
+          # UPX self-extracting ELF files can fail on some Linux kernels and sandboxes.
+          # Releases use Go linker stripping and archive compression for portability.
+          ARGUS_COMPRESS: "0"
+          ARGUS_PACKAGE: "1"
+          ARGUS_PACKAGE_DIR: dist
+        run: |
+          ./build.sh --target "${ARGUS_TARGET_OS}/${ARGUS_TARGET_ARCH}"
+      - name: Smoke test Linux amd64 binary
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: dist/argus-linux-amd64/argus -h
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pkg-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: "dist/*.zip"
+      # Upload Linux binaries separately so the container job can reuse them.
+      - if: matrix.goos == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-linux-${{ matrix.goarch }}
+          path: dist/argus-linux-${{ matrix.goarch }}/argus
+
+  macos-packages:
+    needs: frontend
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - { goos: darwin, goarch: amd64 }
+          - { goos: darwin, goarch: arm64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: server/webui/dist
+      - name: Build Argus macOS app and DMG
+        env:
+          ARGUS_TARGET_OS: ${{ matrix.goos }}
+          ARGUS_TARGET_ARCH: ${{ matrix.goarch }}
+          ARGUS_BUILD_VERSION: ${{ github.ref_name }}
+          ARGUS_SKIP_FRONTEND: "1"
+          ARGUS_SKIP_NPM_CI: "1"
+          ARGUS_COMPRESS: "0"
+          ARGUS_PACKAGE: "1"
+          ARGUS_PACKAGE_DIR: dist
+        run: ./build.sh --target "${ARGUS_TARGET_OS}/${ARGUS_TARGET_ARCH}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pkg-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            dist/*.zip
+            dist/*.dmg
+
+  windows-installer:
+    needs: binaries
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pkg-windows-amd64
+          path: downloaded
+      - name: Install NSIS
+        shell: pwsh
+        run: choco install nsis -y --no-progress
+      - name: Build Argus Windows installer
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem downloaded -Filter *.zip | Select-Object -First 1
+          Expand-Archive -Path $zip.FullName -DestinationPath stage
+          $root = Get-ChildItem stage -Directory | Select-Object -First 1
+          Copy-Item packaging/windows/Argus.nsi $root.FullName
+          Push-Location $root.FullName
+          & "C:\Program Files (x86)\NSIS\makensis.exe" "/DVERSION=${{ github.ref_name }}" Argus.nsi
+          Pop-Location
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item "$root\argus-*-windows-amd64-setup.exe" dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pkg-windows-installer
+          path: dist/*.exe
+
+  # ③ Collect packages and create the GitHub release.
+  release:
+    needs: [binaries, macos-packages, windows-installer]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: pkg-*
+          merge-multiple: true
+          path: dist
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum -- *.zip *.dmg *.exe > SHA256SUMS
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.zip
+            dist/*.dmg
+            dist/*.exe
+            dist/SHA256SUMS
+          generate_release_notes: true
+
+  # ④ Build and publish multi-architecture images to GitHub Container Registry.
+  docker:
+    needs: [binaries]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_NAMESPACE: ghcr.io/shuhunb515/argus
+    steps:
+      - uses: actions/checkout@v4 # Fetch the Dockerfile and skills.
+      - uses: actions/download-artifact@v4
+        with:
+          name: bin-linux-amd64
+          path: dist/amd64
+      - uses: actions/download-artifact@v4
+        with:
+          name: bin-linux-arm64
+          path: dist/arm64
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.IMAGE_NAMESPACE }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

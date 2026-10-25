@@ -1,0 +1,94 @@
+name: detections
+# 检测规则(Sigma·Suricata·ATT&CK 层)这种变化的推动·PR 每次, 规则实际上
+# 点燃并, 几个 SIEM 转换为后端, 覆盖层符合规则并且, 指标为上游
+# 仍然符合来源, SigmaHQ 通过再现测试验证整个常规验证是否通过。. 仅规则
+# 改变和测试·不更新图层的更改在此处显示为红色。. CONTRIBUTING.md 哇
+# detections/tests/README.md 承诺 "八项测试机械地执行贡献合同"到
+# 这是 Merge Gate 实际上支持的工作流程。. Go 建造·静态分析·测试是 ci.yml 我负责这件事.
+# 加上八项测试, 三个非常规门也在同一合并门上运行。: 线束注册表
+# 同步检查, 主机分类工具(detections/triage/argus_host_triage.py)自检, 和
+# 防御指南(docs/defense-{ko,en}.md) 内嵌散文 Sigma 相关模板的
+# 这是一致性检查。. 这三个规则都独立于八规则测试。 run-all.sh 变成一样的. 第三个门是
+# 该模板在其防御指南中断言了这一事实。(`sigma check` 通过了·splunk/eql/loki 转换·lucene/kusto
+# 不支持关联·ko/en 规则体相同)再现, 上游 sigma-cli·后端上升，散文安静下来。
+# 如果出现磨损，请在合流门处抓住它。.
+#
+# 八项测试 Docker 只要你拥有它，它就会旋转(ubuntu-latest 在跑步者上 Docker 是在). 跑步者
+# sigma-cli·scapy·suricata·python Runner，因为它下载镜像并在容器中独立运行
+# 它本身不安装任何东西。, 规则树和指示器指向的只读源文件
+# 挂载且不写入存储. detections/ 除非底部发生变化, 指标测试固定
+# 即使源文件更改也运行. enrich·selfupdate·guard·db 的 User-Agent·标记·销毁令
+# 代币, cmd/argus/main.go 基本听法·代理端口, traffic/traffic.go 的 MITM CA 证书
+# 文件名, db/schema.sql 导航图模式指纹. 源变化指示器
+# 改变规则·合并门可以捕获指标列表悄悄过时的情况。. 公开的 Docker 验证图像
+# 没有的话很少有人下载 Docker Hub 下载速度可能会受到限制, 那时我工作
+# 再转一下就可以解决了。.
+on:
+  push:
+    paths:
+      - "detections/**"
+      - "enrich/enrich.go"
+      - "selfupdate/github.go"
+      - "selfupdate/stage.go"
+      - "guard/guard.go"
+      - "db/db.go"
+      - "db/schema.sql"
+      - "cmd/argus/main.go"
+      - "traffic/traffic.go"
+      # 第三门(防御模板一致性检查)读取两个文件. 如果这个模板改变了
+      # 我们需要重新验证它，因此我们将其放入触发器中。.
+      - "docs/defense-en.md"
+      - "docs/defense-en.md"
+      - ".github/workflows/detections.yml"
+  pull_request:
+    paths:
+      - "detections/**"
+      - "enrich/enrich.go"
+      - "selfupdate/github.go"
+      - "selfupdate/stage.go"
+      - "guard/guard.go"
+      - "db/db.go"
+      - "db/schema.sql"
+      - "cmd/argus/main.go"
+      - "traffic/traffic.go"
+      - "docs/defense-en.md"
+      - "docs/defense-en.md"
+      - ".github/workflows/detections.yml"
+
+permissions:
+  contents: read
+
+# 如果新的推送到达同一分支，则取消之前的执行。, 频繁推送期间不必要的执行
+# 防止其堆积.
+concurrency:
+  group: detections-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detections:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: 测试工具注册表同步检查 (run-all.sh ↔ CI ↔ 目录)
+        run: detections/tests/check-harness-sync.sh
+      - name: 主机分类工具自检 (argus_host_triage.py --self-test · 门不规则)
+        run: detections/tests/triage-selftest.sh
+      - name: 内联防御指南 Sigma 模板注册检查 (sigma check·变换矩阵·ko/en 相同的文字 · 门不规则)
+        run: detections/tests/check-defense-template.sh
+      - name: Sigma 规则再现测试 (sigma check + 后端改造 + 表面保护)
+        run: detections/tests/sigma/run.sh
+      - name: Sigma 真实事件匹配测试 (原子·关联规则为恶意样本/时间线上的话语·顶部的沉默)
+        run: detections/tests/sigma_match/run.sh
+      - name: Sigma SigmaHQ 定制棉绒 (全套验证器 + 形成文件的标准)
+        run: detections/tests/sigma_lint/run.sh
+      - name: Sigma 后端可移植性测试 (确保关联规则在多个后端之间进行转换)
+        run: detections/tests/sigma_backends/run.sh
+      - name: Suricata 规则再现测试 (pcap 合成 → suricata -r → 报警计数断言)
+        run: detections/tests/suricata/run.sh
+      - name: ATT&CK 层 ↔ 规则匹配测试
+        run: detections/tests/attack/run.sh
+      - name: 检测指示器 ↔ 上游源匹配测试 (上游重新同步漂移防护)
+        run: detections/tests/indicators/run.sh
+      - name: 指标 MISP 出口 ↔ CSV 同步测试 (pymisp 通过 MISP 类型验证)
+        run: detections/tests/misp/run.sh

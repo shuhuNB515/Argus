@@ -1,0 +1,35 @@
+# check-external-links.py 要去读书 "已知的 DOWN" allowlist.
+#
+# 写在这里 URL 在这次生存检查中 DOWN 当它出来的时候 ALLOWED 将其分类为 --strict 结束
+# 不要将其放入您的代码中. We don't own it so we can't fix it, 继承上游原文保存文件
+# 只添加死链接(如果我们的存储库管理的链接已损坏 allowlist 不修复它).
+# 添加新项目时，请务必 "为什么我不能修复它"发表评论.
+#
+# 格式: 排成一行 URL 一. `#` 后面是评论, 空行·忽略仅注释行.
+
+# 上游(Autumn-27/ARGUS) CHANGELOG.zh.md:539 贡献者记入 GitHub 简介.
+# 帐户已重命名·已删除 404. 上游原文保存政策(BRIEF 边界 #1·MAINTAINING 2弓)奖项
+# CHANGELOG.zh.md 由于上游保持原样，因此我们不对其进行修改。. 2026-10-07 好的.
+https://github.com/begininvoke
+
+# 上游(Autumn-27/ARGUS) 存储库·在线演示·释放/compare 资产不可公开访问(404), 2026-10 好的.
+# 下面 URL 这个叉子是基于·是一种以信用为标志的上游资产。. 2026-10 目前所有 404 通过
+# 无法连接. AGPL-3.0 因为你需要保留来源归属(BRIEF 边界 #1) 删除链接本身
+# 没有, 策展文件(README·CONTRIBUTING·MAINTAINING·SECURITY·docs/defense)在每个链接中
+# 旁边 "(目前不可用, 2026-10 好的)" 发表评论(G138a 决定 A). 这是上层阶级拥有的资产。
+# 我们无法把它带回来 allowlist 将其保留为. compare·releases 该链接指向上游的原始文本保存文件。
+# (CHANGELOG.zh.md·README.zh.md)由于这是我继承的东西，所以我保持原样。.
+https://argus-demo.vercel.app/
+https://github.com/Autumn-27/ARGUS
+https://github.com/Autumn-27/norma
+https://github.com/Autumn-27/ARGUS/releases
+https://github.com/Autumn-27/ARGUS/compare/v0.3.1...v0.3.2
+https://github.com/Autumn-27/ARGUS/compare/v0.3.2...v0.3.3
+https://github.com/Autumn-27/ARGUS/compare/v0.3.3...v0.3.4
+https://github.com/Autumn-27/ARGUS/compare/v0.3.4...v0.3.5
+https://github.com/Autumn-27/ARGUS/compare/v0.3.5...v0.3.6
+https://github.com/Autumn-27/ARGUS/compare/v0.3.6...v0.3.7
+https://github.com/Autumn-27/ARGUS/compare/v0.3.7...v0.3.8
+https://github.com/Autumn-27/ARGUS/compare/v0.3.8...v0.3.9
+https://github.com/Autumn-27/ARGUS/compare/v0.3.9...v0.3.10
+https://github.com/Autumn-27/ARGUS/compare/v0.3.10...HEAD

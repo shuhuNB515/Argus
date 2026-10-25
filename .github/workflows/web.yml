@@ -1,0 +1,60 @@
+name: web
+# 中文 UI(web/)推送静态导出构建·PR 每次都转, 前端回归
+# 在合并之前抓住它. 发布工作流程(release.yml)是标签(v*)仅在 web 建造
+# 该分叉没有标签推送历史记录，也从未被执行过。 — 如此例行公事 web
+# 改变(TypeScript·React·i18n·next-intl)该工作流程负责验证. Go
+# 侧面构建·测试是 ci.yml 因为我负责这件事, 这里 web/ 只有在改变时才会转动(paths 过滤器).
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "web/**"
+      - ".github/workflows/web.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/web.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  # 静态导出构建是合并门. `NEXT_EXPORT=1 next build` 是 next.config 在
+  # typescript.ignoreBuildErrors 没有设置 TypeScript 由于还执行类型检查，,
+  # 如果存在类型错误或导出失败，此作业将以红色停止，从而阻止合并。.
+  #
+  # biome Lint 也是一个合并门。. 来自上游的线棉风扇(G7)到 0 组织者
+  # 回来(错误 8→0: skills 树 a11y 6 + package.json 格式化程序 1 + logo.svg noSvgWithoutTitle 1),
+  # 信息化水平提升至门禁。. 现在 `npm run check`(biome check)如果发生错误，
+  # 该作业以红色停止并阻止合并。, 防止恢复清洁状态再次变脏。.
+  # 警告·该信息对退出代码没有影响。(biome 银 error 仅在一定水平下降雨-0) 不阻止合并.
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: npm ci
+        run: npm ci
+      - name: 单元测试 (合并门 · vitest)
+        # 纯逻辑(getInitials/formatCurrency, i18n config, statusMeta)和 i18n 在合并之前捕获关键一致性回归.
+        run: npm run test -- --run
+      - name: i18n 区域设置键一致性 (合并门 · ko 标准 5狗区域设置匹配)
+        # ko.json 基于 en/zh/es/ja 检查密钥集是否完全相同。(失踪·全部添加失败).
+        run: npm run check:i18n
+      - name: build:static (合并门 · 包括类型检查)
+        run: npm run build:static
+      - name: UI 汉字防漏器 (合并门 · out HTML 中文 0)
+        # 这个分叉的主要成就是 "向用户显示的屏幕上没有中文。"是.
+        # 防止贡献者在合并之前对中文进行硬编码或错过翻译的回归.
+        # 脚本是 git 根的 web/out 它与工作目录无关，因为它自己找到它。.
+        run: python3 -I ../scripts/check-web-cjk.py
+      - name: biome check (合并门 · lint·format·a11y 错误 0 维护)
+        if: always()
+        run: npm run check

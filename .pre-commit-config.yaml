@@ -1,0 +1,40 @@
+# pre-commit 设置示例 (官方文件: https://pre-commit.com)
+#
+# 存储库 CI 通过首先在本地提交阶段传递两个确定性合并门，, 坏了
+# 让更改在推送之前被捕获. 如果任何钩子的断言失败， 0 提交以未结束的代码结束
+# 停止.
+#
+# 1) detections — 检测规则(detections/)或规则固定的上游源。, 还有防御指南的
+#    内联 Sigma 模板(docs/defense-{ko,en}.md)仅在这个变化的提交中, 八项检测测试和三项
+#    跑步者立即转动门(detections/tests/run-all.sh)运行. CI
+#    (.github/workflows/detections.yml)规则相同·首先传递源范围, 只需更改规则即可
+#    测试·不更新图层的更改, 或者修复防御模板并更新其指南声明
+#    捕获未解决的更改. 要求是 Docker 一切(每个测试在容器中独立运行, 在跑步者中
+#    不安装任何东西).
+# 2) docs — 跟踪的 Markdown 文档中存储库内的链接·图像·锚(#标题) 引用指的是真实的对象
+#    检查是否指向(scripts/check-doc-links.py). CI(.github/workflows/docs.yml)与
+#    是一名检察官, 那个 paths 为了在没有过滤器的情况下匹配所有更改，我们还在此处指定目标文件。
+#    不要缩小范围(always_run). 链接是 .md 编辑时，以及链接指向的文件。(图像·
+#    LICENSE 等等)这是因为当您擦除或移动它时它会损坏。. 仅使用Python标准库
+#    未连接到网络 Docker 几十个没有 ms 它在里面结束.
+#
+# 安装:        pip install pre-commit && pre-commit install
+# 手动运行:   pre-commit run detections --all-files
+#              pre-commit run docs --all-files
+#
+# 这是一个仅使用两个钩子的最小示例。. Go·如果您也想连接 Web Lint，请在下面添加您自己的挂钩。.
+repos:
+  - repo: local
+    hooks:
+      - id: detections
+        name: 测试检测规则 8铃 (Sigma·Suricata·ATT&CK·指标·MISP)
+        entry: detections/tests/run-all.sh
+        language: script
+        pass_filenames: false
+        files: '^(detections/|enrich/enrich\.go|selfupdate/(github|stage)\.go|guard/guard\.go|db/db\.go|db/schema\.sql|cmd/argus/main\.go|traffic/traffic\.go|docs/defense-(ko|en)\.md)'
+      - id: docs
+        name: 文档内的链接·图像·锚(#标题) 完整性检查
+        entry: python3 -I scripts/check-doc-links.py
+        language: system
+        pass_filenames: false
+        always_run: true

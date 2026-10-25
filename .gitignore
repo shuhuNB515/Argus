@@ -1,0 +1,89 @@
+# backend
+/data/
+*.db
+*.db-wal
+*.db-shm
+config.json
+scheduler_state.json
+__pycache__/
+*.pyc
+*.pyo
+
+# frontend
+web/node_modules/
+web/.next/
+web/tsconfig.tsbuildinfo
+web/next-env.d.ts
+*.local
+
+# development tools
+.playwright-mcp/
+.playwright-cli/
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# os
+.DS_Store
+Thumbs.db
+
+# claude code local state
+.claude/
+
+# 内嵌前端的单二进制产物
+/argus
+
+# AOCI runtime state (the indexed source files are tracked; this local pointer is not)
+/.aoci.state.json
+# 一键更新在可执行文件旁留下的中间产物（暂存件 / 备份 / 失败版本 / 升级标记）
+/argus.new
+/argus.new.sha256
+/argus.old
+/argus.failed
+/argus.upgrade.json
+/server/webui/dist/
+/web/out/
+/dist/
+
+# JWT 签名密钥（运行时生成，存项目根，绝不提交）
+/jwt.key
+
+# Docker 部署生成的本地环境（含密码/密钥，不提交）
+.env
+
+# 调度器运行/模拟产生的事件日志（测试产物，不提交）
+*-events.csv
+
+# bench 基准测试相关（本地产物，不提交）
+/bench/
+/Dockerfile.bench
+/Dockerfile.bench.v2
+# --- Argus 本地操作: 没有提交 (业主指示: 测试/私人扫描结果) ---
+work/
+test-results/
+scan-output/
+evidence-local/
+# 本地启动演示应用程序时生成的运行时数据(记录代理流量指数 DB·
+# mitmproxy CA 私钥等)不要提交到公共存储库(BRIEF 边界 #2).
+/demo-data/
+*.local.env
+# D2 模型对比现场测试: package agent 里面 work/ 我别无选择，只能把它留在外面。,
+# OPENROUTER_API_KEY·由于它是消耗网络的本地输出，因此它存储在公共存储库中。
+# 不要承诺(BRIEF 边界 #2). 只阻塞正确的路径并且不影响上游跟踪测试。.
+agent/d2_models_live_test.go
+
+# API 钥匙·秘密: 无论你把它放在哪里都没有提交
+*.env
+secrets.env
+
+# --- Windows 源构建本地输出: 没有提交 ---
+# go build -o argus.exe 发生于 Windows 单一二进制(Unix版本 /argus 并对应于)
+/argus.exe
+# 本地设置中写入的秘密(是的: PostgreSQL 密码). 从不承诺.
+/.secrets/
+# SWC_NATIVE_BINDING_CACHE 作为项目的子项目运行时发生的本机绑定缓存
+/.swc-cache/
+# argus.exe 运行时日志在带到前台时重定向
+/argus.out.log
+/argus.err.log

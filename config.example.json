@@ -1,0 +1,7 @@
+{
+  "_comment": "Argus desktop mode uses its built-in local database. No Docker or PostgreSQL setup is required. Copy this file to config.json only when you need optional runtime settings.",
+  "_comment_skill_dir": "Optional skill directory. Leave empty to use the skills shipped with Argus.",
+  "skill_dir": "",
+  "_comment_language": "Default interface language: zh or en.",
+  "language": "zh"
+}

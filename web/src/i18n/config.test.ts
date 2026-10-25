@@ -1,0 +1,39 @@
+import { describe, expect, it } from "vitest";
+
+import { DEFAULT_LOCALE, isLocale, LOCALE_LABELS, LOCALES, resolveLocale } from "./config";
+
+describe("i18n config", () => {
+  it("exposes the supported locales with native labels", () => {
+    expect([...LOCALES]).toEqual(["zh", "en"]);
+    expect(Object.keys(LOCALE_LABELS).sort()).toEqual([...LOCALES].sort());
+    expect(LOCALE_LABELS.zh).toBe("中文");
+    expect(LOCALE_LABELS.en).toBe("English");
+  });
+
+  it("isLocale narrows known locale strings only", () => {
+    expect(isLocale("zh")).toBe(true);
+    expect(isLocale("en")).toBe(true);
+    expect(isLocale("fr")).toBe(false);
+    expect(isLocale("")).toBe(false);
+    expect(isLocale(null)).toBe(false);
+    expect(isLocale(undefined)).toBe(false);
+    expect(isLocale(1)).toBe(false);
+  });
+
+  it("resolveLocale falls back to the default unless NEXT_PUBLIC_LOCALE is supported", () => {
+    const original = process.env.NEXT_PUBLIC_LOCALE;
+    try {
+      process.env.NEXT_PUBLIC_LOCALE = "en";
+      expect(resolveLocale()).toBe("en");
+
+      process.env.NEXT_PUBLIC_LOCALE = "fr";
+      expect(resolveLocale()).toBe(DEFAULT_LOCALE);
+
+      delete process.env.NEXT_PUBLIC_LOCALE;
+      expect(resolveLocale()).toBe(DEFAULT_LOCALE);
+    } finally {
+      if (original === undefined) delete process.env.NEXT_PUBLIC_LOCALE;
+      else process.env.NEXT_PUBLIC_LOCALE = original;
+    }
+  });
+});

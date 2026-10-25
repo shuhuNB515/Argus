@@ -1,0 +1,76 @@
+name: ci
+# 推和 PR 每次构建·静态分析·转动测试, 朝鲜化过程中出现的倒退
+# 在合并之前抓住它. 发布工作流程(release.yml)是标签(v*)只旋转和构建·仅限分销
+# 因为, 该工作流程负责验证例行更改。.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # 建造·静态分析·在没有数据库的情况下运行测试. 贡献者创建存储库 clone 做完之后
+  # PostgreSQL 没有 `go test ./...` 重现其运行环境. 数据库
+  # 应该在这个环境中进行集成测试。 t.Skipf 因为它会跳到(跳过算作通过。),
+  # 建造·go vet·DB 所有不使用的单元测试 green 必须是. 就这个组合
+  # 跨包边界回归(是的: 在测试另一个包时更改一个包的措辞
+  # 当打破断言时)你可以在合并之前抓住它。.
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - name: go build
+        run: go build ./...
+      - name: go vet
+        run: go vet ./...
+      - name: go test (DB 无 — 跳过集成测试)
+        run: go test ./... -count=1
+
+  # 实际的 PostgreSQL 就变成这样了 DB 集成测试(通知·证据·使用计量等)负责.
+  # 上面 go job 这个跳过路径(通知通道验证, 证据储存, llm_usage 称重等)实际的
+  # 强制将其存入数据库, DB 就连只出现在整合路径中的中文回归，也会在合并之前被抓住。.
+  #
+  # 上游测试工具是所有包共享一个数据库的地方, 只上桌一次
+  # 创建和重用, 它被设计为隐式依赖于包执行顺序和累积的数据。
+  # 有, 如果您在一个数据库中运行所有内容，它会以不同的方式崩溃。(累计数据
+  # 污染, 连接 teardown 竞争, 重置的跨包模式依赖). 所以在这里，对于每个包
+  # 自我 PostgreSQL 启动服务 "空数据库 + 单包" 隔离运行. 每个
+  # 包是独立的 job(matrix) 返回对方的数据·连接·由于它不触及架构，
+  # 冲突在结构上消失了。. db.Open 自动迁移此架构, llm_usage 喜欢
+  # db.Open 这不会为每个测试创建一个表 EnsureLLMUsageTable 向自己保证.
+  go-db:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg: [agent, config, db, evidence, llmrec, server]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: argus
+          POSTGRES_PASSWORD: argus
+          POSTGRES_DB: argus
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U argus -d argus"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - name: go test (DB 整合 · ${{ matrix.pkg }} 包裹检疫)
+        env:
+          ARGUS_PG_DSN: postgres://argus:argus@localhost:5432/argus?sslmode=disable
+        run: go test ./${{ matrix.pkg }}/ -count=1

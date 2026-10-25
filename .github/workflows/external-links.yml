@@ -1,0 +1,36 @@
+name: external-links
+# 通过跟踪 markdown 指向的外部链接(防御指南的事故报告台 boho.or.kr·privacy.go.kr·
+# pipc.go.kr·fsec.or.kr, CISA KEV, OWASP·SigmaHQ·Suricata·MITRE·MISP, 原始演示, GitHub
+# 徽章等)检查是否还活着. 外面 URL 生存就是网络·取决于远程服务器策略
+# flaky 所以内部链接合并门(docs.yml)我没有看到它. 所以这个工作流程是
+# 推·PR Rather than weekly schedule and manual execution(workflow_dispatch)只需转向 **不阻塞合并**,
+# 外部链接已损坏·关闭时，循环执行显示为红色。. 内部链接·锚是 docs.yml, Go 建造·
+# 分析·测试是 ci.yml, 检测规则为 detections.yml, 中文 UI 构建是 web.yml 我负责这件事.
+#
+# --strict 是 allowlist(scripts/external-links-allowlist.txt)不在 DOWN(404·410·5xx·
+# DNS/连接错误)仅当其中之一存在时才会失败. RESTRICTED(阻止机器人·主机速率限制等
+# 活着的状态)哇 ALLOWED(我们无法修复的上游继承死链接)不被视为失败，所以,
+# 红灯 "我们的文章策划的外部链接最近被破坏了 — 去看看"是一个信号. 时间表
+# 工作流是默认分支(main)它只打开.
+on:
+  schedule:
+    - cron: "17 0 * * 1" # 每个星期一 00:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: external-links-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # python3 是 ubuntu-latest 它默认安装在运行器中，并且脚本只是标准库。
+      # 因为是使用的，所以没有单独安装。. -I 按用户站点·在隔离环境中运行.
+      - name: 外部链接生存检查 (浏览器 UA·GET·重定向跟踪 · allowlist 排除 · 非阻塞合并)
+        run: python3 -I scripts/check-external-links.py --strict

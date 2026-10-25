@@ -1,0 +1,33 @@
+name: docs
+# 跟踪的 Markdown 文档中存储库内的链接·图像引用指向真实文件,
+# 以及文档锚链接(#标题)Push 指向目标文档中实际存在的标题·PR
+# 每次都检查一下, 损坏的链接·图像·防止锚点合并. 该链接指向
+# 文件可以存储在任何地方(是的: ../LICENSE·screenshots/en/*.png) paths
+# 在没有过滤器的情况下运行所有更改. 外面 URL(http/https/mailto)取决于网络
+# flaky 因此不予检查 — scripts/check-doc-links.py 只查看内部参考.
+# 因为它只使用Python标准库，不连接网络，所以是确定性的。,
+# Docker Hub 不会因限速等外界因素而闪烁. Go 建造·静态分析·测试是
+# ci.yml, 检测规则再现为 detections.yml, 中文 UI 构建是 web.yml 我负责这件事.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+# 当新的推送到达同一分支时，先前的执行将被取消，以防止不必要的执行累积。.
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # python3 是 ubuntu-latest 它默认安装在运行器中。, 脚本是标准的
+      # 由于仅使用库，因此不需要单独的安装步骤。. -I 按用户站点·环境
+      # 隔离运行.
+      - name: 文档内的链接·图像·锚点完整性检查
+        run: python3 -I scripts/check-doc-links.py
