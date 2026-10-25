@@ -140,6 +140,8 @@ func OpenEmbedded(dataDir string) (*DB, error) {
 	log.Printf("[pg] 正在初始化本地数据库（数据目录：%s）", pgRoot)
 	pg := embeddedpostgres.NewDatabase(
 		embeddedpostgres.DefaultConfig().
+			Encoding("UTF8").
+			Locale("C").
 			CachePath(cachePath).
 			Username("argus").
 			Password("argus-local").

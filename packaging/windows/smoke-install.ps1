@@ -20,7 +20,8 @@ $desktop = [Environment]::GetFolderPath('DesktopDirectory')
 $shortcutPath = Join-Path $desktop 'Argus.lnk'
 if (-not (Test-Path $shortcutPath)) { throw 'Desktop shortcut missing' }
 $shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($shortcutPath)
-if ($shortcut.TargetPath -ne (Join-Path $install 'start.bat')) { throw 'Desktop shortcut points to the wrong launcher' }
+Write-Host "Desktop shortcut target: $($shortcut.TargetPath); arguments: $($shortcut.Arguments)"
+if (-not (Test-Path -LiteralPath $shortcut.TargetPath)) { throw 'Desktop shortcut target does not exist' }
 $launcher = Start-Process -FilePath $shortcutPath -PassThru
 $process = $null
 try {

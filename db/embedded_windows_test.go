@@ -20,7 +20,7 @@ func TestWindowsOfflineEmbeddedDatabase(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer d.Close()
-	if _, err := d.Exec("CREATE TABLE argus_release_smoke (value TEXT); INSERT INTO argus_release_smoke VALUES ('persistent')"); err != nil {
+	if _, err := d.Exec("CREATE TABLE argus_release_smoke (value TEXT); INSERT INTO argus_release_smoke VALUES ('中文数据持久化')"); err != nil {
 		t.Fatal(err)
 	}
 	if err := d.Close(); err != nil {
@@ -35,7 +35,7 @@ func TestWindowsOfflineEmbeddedDatabase(t *testing.T) {
 	if err := d2.QueryRow("SELECT value FROM argus_release_smoke").Scan(&value); err != nil {
 		t.Fatal(err)
 	}
-	if value != "persistent" {
+	if value != "中文数据持久化" {
 		t.Fatalf("persistent value = %q", value)
 	}
 }
