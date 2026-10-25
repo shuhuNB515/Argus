@@ -12,8 +12,6 @@
 
 </div>
 
-![Argus 工作台预览](screenshots/dashboard.png)
-
 Argus 是一个本地运行的授权安全研究与 SRC 验证工作台。它把目标范围、资产、工具调用、浏览器观察、证据、发现和报告放在同一条可追踪链路中，适合个人安全研究、内部测试和经过授权的漏洞验证。
 
 > 安全边界：只能测试你拥有或明确获得书面授权的目标。不要对第三方系统进行未授权扫描、越权、破坏性测试、拒绝服务、支付操作、账号操作或权限变更。
@@ -43,16 +41,6 @@ Argus 适合在本机完成授权范围内的安全研究、SRC 漏洞验证、�
 | 发现与验证 | 工具调用、请求、响应、浏览器状态和验证步骤 | 先记录为潜在问题 |
 | 证据与质量 | 截图、页面状态、来源、影响和去重关系 | 通过质量门禁后升级 |
 | 报告交付 | Finding、Evidence Bundle、Markdown、HTML、PDF | Draft 或 confirmed |
-
-## 界面预览
-
-| 会话与浏览器取证 | 任务图与执行状态 |
-| --- | --- |
-| ![Argus 会话](screenshots/chat.png) | ![Argus 任务](screenshots/tasks.png) |
-
-| 资产与流量 | 发现与证据 |
-| --- | --- |
-| ![Argus 流量](screenshots/traffic.png) | ![Argus 发现](screenshots/findings.png) |
 
 ## 下载
 

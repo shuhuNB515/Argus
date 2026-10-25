@@ -270,9 +270,9 @@ write_checksums() {
   [ "$ARGUS_PACKAGE" = "1" ] || return 0
   checksum_file="$ARGUS_PACKAGE_DIR/SHA256SUMS"
   if command -v sha256sum >/dev/null 2>&1; then
-    (cd "$ARGUS_PACKAGE_DIR" && for archive in *.zip *.dmg; do [ -f "$archive" ] && sha256sum "$archive"; done > "$(basename "$checksum_file")")
+    (cd "$ARGUS_PACKAGE_DIR" && for archive in *.zip *.dmg; do if [ -f "$archive" ]; then sha256sum "$archive"; fi; done > "$(basename "$checksum_file")")
   elif command -v shasum >/dev/null 2>&1; then
-    (cd "$ARGUS_PACKAGE_DIR" && for archive in *.zip *.dmg; do [ -f "$archive" ] && shasum -a 256 "$archive"; done > "$(basename "$checksum_file")")
+    (cd "$ARGUS_PACKAGE_DIR" && for archive in *.zip *.dmg; do if [ -f "$archive" ]; then shasum -a 256 "$archive"; fi; done > "$(basename "$checksum_file")")
   else
     warn "sha256sum or shasum not found; skipping SHA256SUMS"
     return 0
