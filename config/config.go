@@ -175,6 +175,9 @@ func Path() string {
 	if v := strings.TrimSpace(os.Getenv("ARGUS_CONFIG")); v != "" {
 		return v
 	}
+	if runtime.GOOS == "windows" {
+		return filepath.Join(BaseDir(), "config.json")
+	}
 	var candidates []string
 	if cwd, err := os.Getwd(); err == nil {
 		candidates = append(candidates, filepath.Join(cwd, "config.json"))

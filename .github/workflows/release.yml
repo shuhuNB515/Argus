@@ -134,7 +134,7 @@ jobs:
           $root = Get-ChildItem stage -Directory | Select-Object -First 1
           ./packaging/windows/bundle-database.ps1 -PackageRoot $root.FullName
           $env:ARGUS_POSTGRES_CACHE = Join-Path $root.FullName 'database-cache'
-          go test ./db -run '^TestWindowsOfflineEmbeddedDatabase$' -count=1 -v -timeout 180s
+          go test ./config ./db -run '^TestWindows(UserConfigPath|OfflineEmbeddedDatabase)$' -count=1 -v -timeout 180s
           if ($LASTEXITCODE -ne 0) { throw 'Offline database restart test failed' }
           Copy-Item packaging/windows/Argus.nsi $root.FullName
           Push-Location $root.FullName
