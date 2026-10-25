@@ -138,6 +138,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Offline database restart test failed' }
           Copy-Item packaging/windows/Argus.nsi $root.FullName
           Copy-Item packaging/windows/create-shortcuts.ps1 $root.FullName
+          Copy-Item packaging/windows/ArgusShortcuts.cs $root.FullName
           Push-Location $root.FullName
           $version = '${{ github.ref_name }}'.TrimStart('v')
           & "C:\Program Files (x86)\NSIS\makensis.exe" "/DVERSION=$version" Argus.nsi

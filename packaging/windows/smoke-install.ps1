@@ -19,14 +19,17 @@ if (-not (Test-Path (Join-Path $install 'database-cache/embedded-postgres-binari
 $desktop = [Environment]::GetFolderPath('DesktopDirectory')
 $shortcutPath = Join-Path $desktop 'Argus.lnk'
 if (-not (Test-Path $shortcutPath)) { throw 'Desktop shortcut missing' }
-$shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($shortcutPath)
-Write-Host "Desktop shortcut target: $($shortcut.TargetPath); arguments: $($shortcut.Arguments)"
-if (-not (Test-Path -LiteralPath $shortcut.TargetPath)) { throw 'Desktop shortcut target does not exist' }
+Add-Type -Path (Join-Path $install 'ArgusShortcuts.cs')
+$shortcut = [ArgusShortcuts]::Read($shortcutPath)
+Write-Host "Desktop shortcut target: $($shortcut[0]); arguments: $($shortcut[1])"
+if (-not (Test-Path -LiteralPath $shortcut[0])) { throw 'Desktop shortcut target does not exist' }
+if (-not $shortcut[1].Contains((Join-Path $install 'start.bat'))) { throw 'Shortcut arguments lost the Unicode install path' }
 $launcher = Start-Process -FilePath $shortcutPath -PassThru
 $process = $null
 try {
   $ready = $false
-  for ($i = 0; $i -lt 120; $i++) {
+  $deadline = [DateTime]::UtcNow.AddSeconds(90)
+  while ([DateTime]::UtcNow -lt $deadline) {
     $backend = Get-CimInstance Win32_Process -Filter "Name='argus.exe'" |
       Where-Object { $_.ExecutablePath -eq $exe } | Select-Object -First 1
     if ($backend) { $process = Get-Process -Id $backend.ProcessId -ErrorAction SilentlyContinue }
