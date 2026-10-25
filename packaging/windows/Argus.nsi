@@ -2,6 +2,8 @@
   !define VERSION "0.1"
 !endif
 
+!include "LogicLib.nsh"
+
 Name "Argus"
 OutFile "argus-${VERSION}-windows-amd64-setup.exe"
 InstallDir "$PROGRAMFILES64\Argus"
@@ -17,14 +19,16 @@ Section "Argus"
   SetOutPath "$INSTDIR"
   File "argus.exe"
   File "start.bat"
+  File "create-shortcuts.ps1"
   File /r "skills"
   File "README.md"
   File "config.example.json"
   File /r "database-cache"
 
-  CreateDirectory "$SMPROGRAMS\Argus"
-  CreateShortcut "$DESKTOP\Argus.lnk" "$INSTDIR\start.bat" "-addr 127.0.0.1:8787" "$INSTDIR\argus.exe"
-  CreateShortcut "$SMPROGRAMS\Argus\Argus.lnk" "$INSTDIR\start.bat" "-addr 127.0.0.1:8787" "$INSTDIR\argus.exe"
+  ExecWait '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\create-shortcuts.ps1"' $0
+  ${If} $0 != 0
+    Abort "Could not create Argus shortcuts."
+  ${EndIf}
   WriteUninstaller "$INSTDIR\Uninstall Argus.exe"
 SectionEnd
 
@@ -34,6 +38,7 @@ Section "Uninstall"
   RMDir "$SMPROGRAMS\Argus"
   Delete "$INSTDIR\argus.exe"
   Delete "$INSTDIR\start.bat"
+  Delete "$INSTDIR\create-shortcuts.ps1"
   Delete "$INSTDIR\README.md"
   Delete "$INSTDIR\config.example.json"
   Delete "$INSTDIR\Uninstall Argus.exe"
