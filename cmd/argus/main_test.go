@@ -27,7 +27,7 @@ func TestPrintBannerLocalized(t *testing.T) {
 	out := captureStdout(t, func() { printBanner(":8787") })
 	t.Logf("banner sample:\n%s", out)
 
-	for _, want := range []string{"Argus 授权安全研究工作台", "Version", "Listening on", ":8787"} {
+	for _, want := range []string{"Argus 授权安全研究工作台", "Version", "Starting at", ":8787"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("banner is missing %q: %q", want, out)
 		}

@@ -8,10 +8,12 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"io"
+	"log"
 	"net"
 	"net/url"
+	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -118,8 +120,23 @@ func OpenEmbedded(dataDir string) (*DB, error) {
 		return nil, fmt.Errorf("choose embedded database port: %w", err)
 	}
 	pgRoot := filepath.Join(dataDir, "database")
+	cachePath := os.Getenv("ARGUS_POSTGRES_CACHE")
+	if cachePath == "" {
+		if exe, err := os.Executable(); err == nil {
+			candidate := filepath.Join(filepath.Dir(exe), "database-cache")
+			archive := fmt.Sprintf("embedded-postgres-binaries-%s-%s-%s.txz", runtime.GOOS, runtime.GOARCH, embeddedpostgres.V18)
+			if info, err := os.Stat(filepath.Join(candidate, archive)); err == nil && !info.IsDir() {
+				cachePath = candidate
+			}
+		}
+	}
+	if runtime.GOOS == "windows" && cachePath == "" {
+		return nil, fmt.Errorf("Argus 数据库运行文件缺失，请重新安装完整的 Windows 安装包（database-cache）")
+	}
+	log.Printf("[pg] 正在初始化本地数据库（数据目录：%s）", pgRoot)
 	pg := embeddedpostgres.NewDatabase(
 		embeddedpostgres.DefaultConfig().
+			CachePath(cachePath).
 			Username("argus").
 			Password("argus-local").
 			Database("argus").
@@ -127,7 +144,7 @@ func OpenEmbedded(dataDir string) (*DB, error) {
 			RuntimePath(filepath.Join(pgRoot, "runtime")).
 			DataPath(filepath.Join(pgRoot, "data")).
 			BinariesPath(filepath.Join(pgRoot, "binaries")).
-			Logger(io.Discard),
+			Logger(log.Writer()),
 	)
 	if err := pg.Start(); err != nil {
 		return nil, fmt.Errorf("start embedded database: %w", err)

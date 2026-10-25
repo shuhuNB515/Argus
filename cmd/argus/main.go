@@ -7,9 +7,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime"
@@ -26,19 +29,13 @@ import (
 // -ldflags "-X main.version=<tag>". Defaults to "dev" for local builds.
 var version = "dev"
 
-const banner = `
-    _    ____ _____ _______  __
-   / \  |  _ \_   _| ____\ \/ /
-  / _ \ | |_) || | |  _|  \  /
- / ___ \|  _ < | | | |___ /  \
-/_/   \_\_| \_\|_| |_____/_/\_\
-`
+const banner = "\n  Argus\n"
 
 // printBanner writes the startup banner + version/runtime info to stdout.
 func printBanner(addr string) {
 	fmt.Print(banner)
 	fmt.Println("  Argus 授权安全研究工作台")
-	fmt.Printf("  Version %s  ·  %s/%s  ·  %s  ·  Listening on %s\n\n",
+	fmt.Printf("  Version %s  ·  %s/%s  ·  %s  ·  Starting at %s\n\n",
 		version, runtime.GOOS, runtime.GOARCH, runtime.Version(), addr)
 }
 
@@ -52,9 +49,10 @@ func main() {
 
 func run() int {
 	var (
-		addr    = flag.String("addr", "127.0.0.1:8787", "HTTP listen address (default accepts local connections only; use :8787 to serve other hosts)")
-		dataDir = flag.String("data", filepath.Join(config.BaseDir(), "data"), "data directory for SQLite stores (default: data/ next to the executable)")
-		proxy   = flag.String("proxy", "127.0.0.1:8788", "traffic recording proxy address (empty to disable)")
+		addr        = flag.String("addr", "127.0.0.1:8787", "HTTP listen address (default accepts local connections only; use :8787 to serve other hosts)")
+		dataDir     = flag.String("data", filepath.Join(config.BaseDir(), "data"), "data directory for SQLite stores (default: data/ next to the executable)")
+		proxy       = flag.String("proxy", "127.0.0.1:8788", "traffic recording proxy address (empty to disable)")
+		openBrowser = flag.Bool("open-browser", runtime.GOOS == "windows", "open the workbench after startup")
 	)
 	flag.Parse()
 
@@ -67,6 +65,16 @@ func run() int {
 	// capture backend logs into the in-memory sink (still to stderr) so the /logs
 	// page can show a live log stream. Do this first, to catch startup logs too.
 	server.StartLogCapture()
+	if runtime.GOOS == "windows" {
+		if err := os.MkdirAll(config.BaseDir(), 0o700); err != nil {
+			log.Printf("无法创建用户数据目录：%v", err)
+			return 1
+		}
+		if f, err := os.OpenFile(filepath.Join(config.BaseDir(), "startup.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600); err == nil {
+			defer f.Close()
+			log.SetOutput(io.MultiWriter(log.Writer(), f))
+		}
+	}
 
 	// Self-update bootstrap: swap in a staged binary, or count a post-swap boot
 	// attempt and roll back if the new build keeps dying. Must run before we open
@@ -97,7 +105,8 @@ func run() int {
 
 	mgr, err := server.NewManager(*dataDir, *proxy)
 	if err != nil {
-		log.Fatalf("open stores: %v", err)
+		log.Printf("启动失败：%v", err)
+		return 1
 	}
 	defer mgr.Close()
 
@@ -121,12 +130,22 @@ func run() int {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
+	listener, err := net.Listen("tcp", *addr)
+	if err != nil {
+		log.Printf("无法打开工作台端口 %s：%v", *addr, err)
+		return 1
+	}
 	go func() {
 		log.Printf("Argus %s backend listening on %s (data=%s, workers=%d)", version, *addr, *dataDir, mgr.Workers())
-		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := httpSrv.Serve(listener); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("serve: %v", err)
 		}
 	}()
+	if *openBrowser {
+		if err := launchBrowser("http://" + *addr); err != nil {
+			log.Printf("请在浏览器打开 http://%s（自动打开失败：%v）", *addr, err)
+		}
+	}
 
 	// Two ways out: a signal (normal stop → exit 0, the start script stops looping)
 	// or a staged update / rollback (→ exit 75, the script relaunches us and the
@@ -144,6 +163,23 @@ func run() int {
 	defer cancel()
 	_ = httpSrv.Shutdown(shutdownCtx)
 	return code
+}
+
+func launchBrowser(url string) error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("rundll32.exe", "url.dll,FileProtocolHandler", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	go func() { _ = cmd.Wait() }()
+	return nil
 }
 
 // shutdownContext deliberately does not derive from signalCtx. If it did, the

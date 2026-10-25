@@ -12,7 +12,7 @@ macOS 应用会把数据保存到当前用户的 `~/Library/Application Support/
 
 Argus 自带本地数据库运行时。用户不需要安装 Docker、配置 PostgreSQL、创建数据库或填写数据库密码。第一次启动会自动准备对应系统的数据库运行文件，之后会保存在 Argus 数据目录中并持续复用。
 
-如果首次启动需要下载数据库运行文件，请保持网络连接；下载完成后再次启动会直接使用本地缓存。
+Windows 安装包和便携 ZIP 已包含数据库运行文件，首次启动无需联网下载数据库。其他平台首次启动如需下载数据库运行文件，请保持网络连接。
 
 ## 支持的平台
 
@@ -48,7 +48,7 @@ The macOS app stores data in `~/Library/Application Support/Argus`, so it can ru
 
 Argus starts its own local database runtime. Docker, PostgreSQL installation, database creation, and database passwords are not required. The first launch prepares the platform database runtime and caches it in the Argus data directory for later launches.
 
-If the database runtime must be downloaded on the first launch, keep the machine online until the download finishes.
+Windows installers and portable ZIPs include the database runtime for offline startup. On other platforms, keep the machine online if the first launch needs to download the runtime.
 
 Configure your own OpenAI-compatible model endpoint and API key in Argus settings. Keys stay in the local data directory and are not included in packages or source control.
 

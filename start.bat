@@ -30,9 +30,7 @@ if "!code!"=="%RESTART_CODE%" (
 	goto loop
 )
 
-echo [Argus] unexpected exit (code=!code!); restarting in !delay!s 1>&2
-set /a pings=!delay!+1
-ping -n !pings! 127.0.0.1 >nul 2>&1
-set /a delay=!delay!*2
-if !delay! gtr %MAX_DELAY% set /a delay=%MAX_DELAY%
-goto loop
+echo [Argus] Startup failed (code=!code!). 1>&2
+echo See: %LOCALAPPDATA%\Argus\startup.log
+pause
+exit /b !code!

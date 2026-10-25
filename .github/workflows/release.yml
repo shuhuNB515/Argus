@@ -66,7 +66,7 @@ jobs:
         run: dist/argus-linux-amd64/argus -h
       - uses: actions/upload-artifact@v4
         with:
-          name: pkg-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: ${{ matrix.goos == 'windows' && 'raw-windows-amd64' || format('pkg-{0}-{1}', matrix.goos, matrix.goarch) }}
           path: "dist/*.zip"
       # Upload Linux binaries separately so the container job can reuse them.
       - if: matrix.goos == 'linux'
@@ -118,27 +118,43 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: pkg-windows-amd64
+          name: raw-windows-amd64
           path: downloaded
       - name: Install NSIS
         shell: pwsh
         run: choco install nsis -y --no-progress
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
       - name: Build Argus Windows installer
         shell: pwsh
         run: |
           $zip = Get-ChildItem downloaded -Filter *.zip | Select-Object -First 1
           Expand-Archive -Path $zip.FullName -DestinationPath stage
           $root = Get-ChildItem stage -Directory | Select-Object -First 1
+          ./packaging/windows/bundle-database.ps1 -PackageRoot $root.FullName
+          $env:ARGUS_POSTGRES_CACHE = Join-Path $root.FullName 'database-cache'
+          go test ./db -run '^TestWindowsOfflineEmbeddedDatabase$' -count=1 -v -timeout 180s
+          if ($LASTEXITCODE -ne 0) { throw 'Offline database restart test failed' }
           Copy-Item packaging/windows/Argus.nsi $root.FullName
           Push-Location $root.FullName
-          & "C:\Program Files (x86)\NSIS\makensis.exe" "/DVERSION=${{ github.ref_name }}" Argus.nsi
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          & "C:\Program Files (x86)\NSIS\makensis.exe" "/DVERSION=$version" Argus.nsi
+          if ($LASTEXITCODE -ne 0) { throw 'Windows installer build failed' }
           Pop-Location
           New-Item -ItemType Directory -Force dist | Out-Null
           Copy-Item "$root\argus-*-windows-amd64-setup.exe" dist/
+          Remove-Item (Join-Path $root.FullName 'Argus.nsi')
+          Get-ChildItem $root.FullName -Filter '*-setup.exe' | Remove-Item
+          Compress-Archive -Path $root.FullName -DestinationPath (Join-Path 'dist' $zip.Name)
+          $installer = (Get-ChildItem dist -Filter '*-setup.exe' | Select-Object -First 1).FullName
+          ./packaging/windows/smoke-install.ps1 -Installer $installer
       - uses: actions/upload-artifact@v4
         with:
-          name: pkg-windows-installer
-          path: dist/*.exe
+          name: pkg-windows-amd64
+          path: |
+            dist/*.exe
+            dist/*.zip
 
   # ③ Collect packages and create the GitHub release.
   release:

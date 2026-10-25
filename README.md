@@ -78,6 +78,8 @@ shasum -a 256 -c SHA256SUMS
 3. 安装程序会创建开始菜单和桌面快捷方式。
 4. 点击 Argus 快捷方式即可启动；不需要 Docker 或手动启动脚本。
 
+Windows 安装包和便携 ZIP 均包含数据库运行文件，首次启动无需下载数据库。工作台就绪后会自动打开浏览器；启动失败时会保留错误提示，日志位于 `%LOCALAPPDATA%\Argus\startup.log`。AMD 与 Intel 的 64 位 Windows 电脑使用同一份 amd64 安装包。
+
 ### Linux
 
 1. 下载 `linux-amd64` 或 `linux-arm64` 压缩包并解压。

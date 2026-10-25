@@ -20,10 +20,11 @@ Section "Argus"
   File /r "skills"
   File "README.md"
   File "config.example.json"
+  File /r "database-cache"
 
   CreateDirectory "$SMPROGRAMS\Argus"
-  CreateShortcut "$DESKTOP\Argus.lnk" "$INSTDIR\argus.exe" "-addr 127.0.0.1:8787"
-  CreateShortcut "$SMPROGRAMS\Argus\Argus.lnk" "$INSTDIR\argus.exe" "-addr 127.0.0.1:8787"
+  CreateShortcut "$DESKTOP\Argus.lnk" "$INSTDIR\start.bat" "-addr 127.0.0.1:8787" "$INSTDIR\argus.exe"
+  CreateShortcut "$SMPROGRAMS\Argus\Argus.lnk" "$INSTDIR\start.bat" "-addr 127.0.0.1:8787" "$INSTDIR\argus.exe"
   WriteUninstaller "$INSTDIR\Uninstall Argus.exe"
 SectionEnd
 
@@ -37,5 +38,6 @@ Section "Uninstall"
   Delete "$INSTDIR\config.example.json"
   Delete "$INSTDIR\Uninstall Argus.exe"
   RMDir /r "$INSTDIR\skills"
+  RMDir /r "$INSTDIR\database-cache"
   RMDir "$INSTDIR"
 SectionEnd

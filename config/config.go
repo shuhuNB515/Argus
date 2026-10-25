@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -106,6 +107,14 @@ func BaseDir() string {
 		return "."
 	}
 	dir := filepath.Dir(exe)
+	if runtime.GOOS == "windows" {
+		if local := os.Getenv("LOCALAPPDATA"); local != "" {
+			return filepath.Join(local, "Argus")
+		}
+		if userDir, err := os.UserConfigDir(); err == nil {
+			return filepath.Join(userDir, "Argus")
+		}
+	}
 	if isGoRunDir(dir) {
 		return "." // throwaway `go run` binary → use CWD
 	}
@@ -205,6 +214,13 @@ func SkillDir() string {
 	} else if exe, err := os.Executable(); err == nil {
 		if bundleRoot, ok := macOSBundleRoot(exe); ok {
 			d = filepath.Join(bundleRoot, "Contents", "Resources", "skills")
+		}
+	}
+	if d == "" {
+		if runtime.GOOS == "windows" {
+			if exe, err := os.Executable(); err == nil {
+				d = filepath.Join(filepath.Dir(exe), "skills")
+			}
 		}
 	}
 	if d == "" {
