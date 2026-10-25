@@ -112,8 +112,8 @@ var embeddedDatabases sync.Map // map[*DB]*embeddedpostgres.EmbeddedPostgres
 // OpenEmbedded starts a private PostgreSQL instance owned by this Argus
 // process. Its data directory is persistent, while the runtime directory is
 // disposable. No Docker, external service, DSN, or user database setup is
-// required. The database binaries are downloaded once into the data directory
-// and reused on subsequent launches.
+// required. Releases use the bundled runtime archive; source development can
+// download and cache it when no bundled archive exists.
 func OpenEmbedded(dataDir string) (*DB, error) {
 	port, err := freePort()
 	if err != nil {
@@ -127,10 +127,13 @@ func OpenEmbedded(dataDir string) (*DB, error) {
 	cachePath := os.Getenv("ARGUS_POSTGRES_CACHE")
 	if cachePath == "" {
 		if exe, err := os.Executable(); err == nil {
-			candidate := filepath.Join(filepath.Dir(exe), "database-cache")
-			archive := fmt.Sprintf("embedded-postgres-binaries-%s-%s-%s.txz", runtime.GOOS, runtime.GOARCH, embeddedpostgres.V18)
-			if info, err := os.Stat(filepath.Join(candidate, archive)); err == nil && !info.IsDir() {
-				cachePath = candidate
+			candidates := []string{filepath.Join(filepath.Dir(exe), "database-cache"), filepath.Join(filepath.Dir(exe), "..", "Resources", "database-cache")}
+			archive := bundledArchiveName(runtime.GOOS, runtime.GOARCH)
+			for _, candidate := range candidates {
+				if info, err := os.Stat(filepath.Join(candidate, archive)); err == nil && !info.IsDir() && info.Size() > 0 {
+					cachePath = candidate
+					break
+				}
 			}
 		}
 	}
@@ -163,6 +166,13 @@ func OpenEmbedded(dataDir string) (*DB, error) {
 	}
 	embeddedDatabases.Store(d, pg)
 	return d, nil
+}
+
+func bundledArchiveName(goos, arch string) string {
+	if arch == "arm64" && (goos == "linux" || goos == "darwin") {
+		arch += "v8"
+	}
+	return fmt.Sprintf("embedded-postgres-binaries-%s-%s-%s.txz", goos, arch, embeddedpostgres.V18)
 }
 
 func freePort() (int, error) {

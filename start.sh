@@ -7,7 +7,7 @@
 #   ./start.sh -addr :9000             Pass extra arguments to Argus.
 #
 # Exit code 75 means Argus requested a restart after an update or rollback.
-# Other unexpected exits are retried with an exponential backoff.
+# Startup errors stop with a nonzero status and a log location.
 set -u
 
 cd "$(dirname "$0")" || exit 1
@@ -16,7 +16,6 @@ BIN=./argus
 [ -x "$BIN" ] || { echo "[Argus] executable not found: $BIN" >&2; exit 1; }
 
 RESTART_CODE=75
-MAX_DELAY=60
 
 child=0
 stopping=0
@@ -29,7 +28,6 @@ forward() {
 }
 trap forward INT TERM
 
-delay=1
 while :; do
 	"$BIN" "$@" &
 	child=$!
@@ -54,13 +52,11 @@ while :; do
 			;;
 		"$RESTART_CODE")
 			echo "[Argus] restart requested; applying the new version"
-			delay=1
 			;;
 		*)
-			echo "[Argus] unexpected exit (code=$code); restarting in ${delay}s" >&2
-			sleep "$delay"
-			delay=$((delay * 2))
-			[ "$delay" -gt "$MAX_DELAY" ] && delay=$MAX_DELAY
+			echo "[Argus] startup failed (code=$code)" >&2
+			echo "[Argus] See the startup.log in your Argus user data directory." >&2
+			exit "$code"
 			;;
 	esac
 done

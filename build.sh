@@ -210,6 +210,11 @@ package_binary() {
       cp README.md "$package_root/"
     fi
   fi
+  if [ "$goos" != "windows" ]; then
+    cache_dir="$package_root/database-cache"
+    if [ "$goos" = "darwin" ]; then cache_dir="$app_root/Resources/database-cache"; fi
+    python3 scripts/bundle-database.py --os "$goos" --arch "$goarch" --dest "$cache_dir"
+  fi
   (cd "$ARGUS_PACKAGE_DIR" && zip -q -r -9 "$(basename "$archive")" "$(basename "$package_root")")
   if [ "$goos" = "darwin" ] && command -v hdiutil >/dev/null 2>&1; then
     dmg_stage=$(mktemp -d "${TMPDIR:-/tmp}/argus-dmg.XXXXXX")

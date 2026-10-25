@@ -102,6 +102,9 @@ func Language() string {
 // current working directory so dev artifacts (data/, transcripts) and config
 // resolve against the project dir, not the throwaway binary's location.
 func BaseDir() string {
+	if dir := strings.TrimSpace(os.Getenv("ARGUS_HOME")); dir != "" {
+		return dir
+	}
 	exe, err := os.Executable()
 	if err != nil {
 		return "."
@@ -126,6 +129,14 @@ func BaseDir() string {
 		}
 		return filepath.Join(bundleRoot, "Contents", "Resources")
 	}
+	if runtime.GOOS == "linux" {
+		if data := os.Getenv("XDG_DATA_HOME"); filepath.IsAbs(data) {
+			return filepath.Join(data, "Argus")
+		}
+		if home, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(home, ".local", "share", "Argus")
+		}
+	}
 	return dir
 }
 
@@ -144,38 +155,27 @@ func macOSBundleRoot(exe string) (string, bool) {
 	return appDir, true
 }
 
-// isGoRunDir reports whether dir is where `go run` parked its executable: under
-// the system temp dir (cache miss), or anywhere inside a Go build cache
-// (…/go-build/…, the cache-hit case — NOT under os.TempDir(), which is why the
-// old temp-only check failed intermittently). In both cases the binary is
-// throwaway, so config/data must resolve against the CWD.
+// isGoRunDir recognizes Go's temporary build directory and build cache.
+// A release extracted into the system temporary directory is still a release.
 func isGoRunDir(dir string) bool {
-	if tmp := os.TempDir(); tmp != "" {
-		if rel, err := filepath.Rel(tmp, dir); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-			return true
-		}
-	}
 	for _, seg := range strings.Split(filepath.ToSlash(dir), "/") {
-		if seg == "go-build" {
+		if seg == "go-build" || strings.HasPrefix(seg, "go-build") && len(seg) > len("go-build") && seg[len("go-build")] >= '0' && seg[len("go-build")] <= '9' {
 			return true
 		}
 	}
 	return false
 }
 
-// Path returns the config file path. Resolution order:
-//  1. env ARGUS_CONFIG (explicit override)
-//  2. ./config.json in the current working directory (running from the project
-//     dir — robust no matter where `go run` placed the temp/cached binary)
-//  3. config.json next to the executable (a distributed binary keeps it beside)
-//
-// The first existing file wins. If none exist, the CWD path is returned so the
-// "not found" message points at the project dir the user most likely expected.
+// Path honors ARGUS_CONFIG first. Releases use the writable user data directory;
+// source development through go run can use config.json in the project directory.
 func Path() string {
 	if v := strings.TrimSpace(os.Getenv("ARGUS_CONFIG")); v != "" {
 		return v
 	}
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" || os.Getenv("ARGUS_HOME") != "" {
+		return filepath.Join(BaseDir(), "config.json")
+	}
+	if exe, err := os.Executable(); err == nil && !isGoRunDir(filepath.Dir(exe)) {
 		return filepath.Join(BaseDir(), "config.json")
 	}
 	var candidates []string
@@ -205,7 +205,7 @@ func Load() Config {
 
 // SkillDir returns the skill root directory with precedence:
 //
-//	env ARGUS_SKILL_DIR  >  config file (skill_dir)  >  BaseDir()/skills
+//	env ARGUS_SKILL_DIR > config file > bundled skills > BaseDir()/skills
 //
 // The directory is created if it does not exist.
 func SkillDir() string {
@@ -217,6 +217,8 @@ func SkillDir() string {
 	} else if exe, err := os.Executable(); err == nil {
 		if bundleRoot, ok := macOSBundleRoot(exe); ok {
 			d = filepath.Join(bundleRoot, "Contents", "Resources", "skills")
+		} else if info, err := os.Stat(filepath.Join(filepath.Dir(exe), "skills")); err == nil && info.IsDir() {
+			d = filepath.Join(filepath.Dir(exe), "skills")
 		}
 	}
 	if d == "" {

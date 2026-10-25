@@ -1,0 +1,10 @@
+FROM python:3.11-slim
+ARG RELEASE_DIR
+RUN groupadd --gid 1000 argus && useradd --uid 1000 --gid argus --create-home argus
+COPY ${RELEASE_DIR}/ /opt/Argus/
+COPY scripts/smoke-release.py /test/smoke-release.py
+RUN chmod -R a-w /opt/Argus && chmod a+rx /opt/Argus/start.sh /opt/Argus/argus
+USER argus
+ENV HOME=/home/argus
+WORKDIR /home/argus
+CMD ["python", "/test/smoke-release.py", "/opt/Argus"]

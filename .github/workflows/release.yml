@@ -64,6 +64,16 @@ jobs:
       - name: Smoke test Linux amd64 binary
         if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
         run: dist/argus-linux-amd64/argus -h
+      - uses: docker/setup-qemu-action@v3
+        if: matrix.goos == 'linux'
+      - name: Test original Linux launcher offline with read-only installation
+        if: matrix.goos == 'linux'
+        run: |
+          archive=$(find dist -maxdepth 1 -name '*.zip' -print -quit)
+          unzip -q "$archive" -d dist/launcher-test
+          root=$(find dist/launcher-test -mindepth 1 -maxdepth 1 -type d -print -quit)
+          docker build --platform "linux/${{ matrix.goarch }}" -f packaging/tests/Dockerfile.launcher --build-arg RELEASE_DIR="$root" -t argus-launcher-test .
+          docker run --rm --network none --platform "linux/${{ matrix.goarch }}" argus-launcher-test
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.goos == 'windows' && 'raw-windows-amd64' || format('pkg-{0}-{1}', matrix.goos, matrix.goarch) }}
@@ -104,6 +114,14 @@ jobs:
           ARGUS_PACKAGE: "1"
           ARGUS_PACKAGE_DIR: dist
         run: ./build.sh --target "${ARGUS_TARGET_OS}/${ARGUS_TARGET_ARCH}"
+      - name: Test original macOS app launcher
+        if: matrix.goarch == 'arm64'
+        run: |
+          archive=$(find dist -maxdepth 1 -name '*.zip' -print -quit)
+          unzip -q "$archive" -d dist/launcher-test
+          app=$(find dist/launcher-test -name Argus.app -type d -print -quit)
+          export HOME="$(mktemp -d)"
+          python3 scripts/smoke-release.py "$app"
       - uses: actions/upload-artifact@v4
         with:
           name: pkg-${{ matrix.goos }}-${{ matrix.goarch }}
@@ -222,3 +240,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Verify published image defaults without network or application settings
+        run: |
+          docker pull "${IMAGE_NAMESPACE}:${GITHUB_REF_NAME}"
+          python3 scripts/smoke-container.py "${IMAGE_NAMESPACE}:${GITHUB_REF_NAME}"

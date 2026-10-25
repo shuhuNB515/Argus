@@ -1,52 +1,18 @@
 #!/usr/bin/env bash
-# Argus 本地真实运行模式：PostgreSQL + Go Agent 运行时 + Next.js 前端。
+# Argus 本地开发模式：内置数据库 + Go Agent 运行时 + Next.js 前端，无需 Docker。
 # 浏览器访问 http://127.0.0.1:8788；Ctrl-C 会停止后端和前端，数据库保留。
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-if [[ ! -f .env ]]; then
-  echo "[Argus] 缺少 .env。请先复制 .env.example 为 .env，并填写数据库密码、管理员密码和模型配置。" >&2
-  exit 1
+if [[ -f .env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
 fi
-
-# shellcheck disable=SC1091
-set -a
-source .env
-set +a
-
-: "${POSTGRES_USER:=argus}"
-: "${POSTGRES_DB:=argus}"
-: "${ARGUS_PG_PORT:=5433}"
-: "${POSTGRES_PASSWORD:?请在 .env 中设置 POSTGRES_PASSWORD}"
-
-if ! command -v docker >/dev/null 2>&1; then
-  echo "[Argus] 未找到 Docker，请先安装并启动 Docker Desktop。" >&2
-  exit 1
-fi
-
-if ! docker info >/dev/null 2>&1; then
-  echo "[Argus] Docker Desktop 尚未运行，请先启动它。" >&2
-  exit 1
-fi
-
-echo "[Argus] 正在启动本地 PostgreSQL…"
-docker compose up -d postgres >/dev/null
-
-echo "[Argus] 等待数据库就绪…"
-for _ in {1..30}; do
-  if docker compose exec -T postgres pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1; then
-    break
-  fi
-  sleep 1
-done
-if ! docker compose exec -T postgres pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1; then
-  echo "[Argus] PostgreSQL 未能在 30 秒内就绪。" >&2
-  exit 1
-fi
-
-export ARGUS_PG_DSN="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:${ARGUS_PG_PORT}/${POSTGRES_DB}?sslmode=disable"
+export ARGUS_NO_BROWSER=1
 export ARGUS_CORS_ORIGINS="${ARGUS_CORS_ORIGINS:-http://127.0.0.1:8788,http://localhost:8788}"
 export ARGUS_LANG="${ARGUS_LANG:-zh}"
 unset NEXT_PUBLIC_MOCK

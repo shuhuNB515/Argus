@@ -22,6 +22,14 @@ func TestShutdownContextPreservesNamedCause(t *testing.T) {
 	}
 }
 
+func TestBrowserURLUsesReachableLoopback(t *testing.T) {
+	for addr, want := range map[string]string{":8787": "http://127.0.0.1:8787", "0.0.0.0:9000": "http://127.0.0.1:9000", "[::]:8787": "http://127.0.0.1:8787", "[::1]:8787": "http://[::1]:8787"} {
+		if got := workbenchURL(addr); got != want {
+			t.Errorf("%s: got %s, want %s", addr, got, want)
+		}
+	}
+}
+
 // TestPrintBannerLocalized verifies the Argus branding and visible startup details.
 func TestPrintBannerLocalized(t *testing.T) {
 	out := captureStdout(t, func() { printBanner(":8787") })

@@ -50,9 +50,9 @@ func main() {
 func run() int {
 	var (
 		addr        = flag.String("addr", "127.0.0.1:8787", "HTTP listen address (default accepts local connections only; use :8787 to serve other hosts)")
-		dataDir     = flag.String("data", filepath.Join(config.BaseDir(), "data"), "data directory for SQLite stores (default: data/ next to the executable)")
+		dataDir     = flag.String("data", filepath.Join(config.BaseDir(), "data"), "persistent data directory (default: per-user Argus directory)")
 		proxy       = flag.String("proxy", "127.0.0.1:8788", "traffic recording proxy address (empty to disable)")
-		openBrowser = flag.Bool("open-browser", runtime.GOOS == "windows", "open the workbench after startup")
+		openBrowser = flag.Bool("open-browser", os.Getenv("ARGUS_NO_BROWSER") != "1", "open the workbench after startup")
 	)
 	flag.Parse()
 
@@ -65,7 +65,7 @@ func run() int {
 	// capture backend logs into the in-memory sink (still to stderr) so the /logs
 	// page can show a live log stream. Do this first, to catch startup logs too.
 	server.StartLogCapture()
-	if runtime.GOOS == "windows" {
+	{
 		if err := os.MkdirAll(config.BaseDir(), 0o700); err != nil {
 			log.Printf("无法创建用户数据目录：%v", err)
 			return 1
@@ -142,8 +142,9 @@ func run() int {
 		}
 	}()
 	if *openBrowser {
-		if err := launchBrowser("http://" + *addr); err != nil {
-			log.Printf("请在浏览器打开 http://%s（自动打开失败：%v）", *addr, err)
+		url := workbenchURL(*addr)
+		if err := launchBrowser(url); err != nil {
+			log.Printf("请在浏览器打开 %s（自动打开失败：%v）", url, err)
 		}
 	}
 
@@ -163,6 +164,17 @@ func run() int {
 	defer cancel()
 	_ = httpSrv.Shutdown(shutdownCtx)
 	return code
+}
+
+func workbenchURL(addr string) string {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "http://" + addr
+	}
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		host = "127.0.0.1"
+	}
+	return "http://" + net.JoinHostPort(host, port)
 }
 
 func launchBrowser(url string) error {

@@ -20,9 +20,9 @@ A local Agent workbench for authorized security research and SRC vulnerability v
 
 Open [Releases](https://github.com/shuhuNB515/Argus/releases) and download the package for your system.
 
-- Windows Intel/AMD PCs: `argus-*-windows-amd64.zip`
-- macOS Intel: `argus-*-darwin-amd64.zip`
-- macOS Apple Silicon: `argus-*-darwin-arm64.zip`
+- Windows Intel/AMD PCs: `argus-*-windows-amd64-setup.exe`
+- macOS Intel: `argus-*-darwin-amd64.dmg`
+- macOS Apple Silicon (including M5): `argus-*-darwin-arm64.dmg`
 - Linux x86-64: `argus-*-linux-amd64.zip`
 - Linux ARM64: `argus-*-linux-arm64.zip`
 
@@ -30,17 +30,25 @@ Open [Releases](https://github.com/shuhuNB515/Argus/releases) and download the p
 
 ## Run locally
 
-The desktop package starts a private embedded PostgreSQL instance automatically for task, conversation, asset, evidence, and report data. Users do not need Docker, a database server, or a DSN configuration. On first launch Argus downloads and caches the platform database runtime, then reuses the persistent local data directory:
+Install the package and launch Argus from its application icon. Linux packages also include `start.sh`. All release packages include their database runtime; even the first startup works without downloading a database. No Docker, database account, password, path flags, or configuration file is required. The workbench opens at <http://127.0.0.1:8787>.
+
+Data and startup logs are stored in a writable directory for the current user:
+
+- Windows: `%LOCALAPPDATA%\\Argus`
+- macOS: `~/Library/Application Support/Argus`
+- Linux: `$XDG_DATA_HOME/Argus`, or `~/.local/share/Argus`
+
+Configure your own model provider and API key in the application before starting Agent tasks. Credentials are never bundled with installers.
+
+For the optional Docker deployment, run this in the repository directory:
 
 ```bash
-cp .env.example .env
-# Only edit .env when running the developer Docker environment.
-./dev.sh
+docker compose up -d
 ```
 
-Open <http://127.0.0.1:8788> in a browser.
+No `.env` file or separate database service is needed. The image includes its database runtime, an ordinary system user, and directory permissions. Compose persists data in a named volume and exposes the workbench on localhost.
 
-Docker Compose remains available for development. A desktop package does not require Docker. Existing PostgreSQL deployments may still be selected with `ARGUS_PG_DSN`.
+Source development uses `./dev.sh` and opens <http://127.0.0.1:8788>. Advanced deployments may still select an existing PostgreSQL server with `ARGUS_PG_DSN`.
 
 ## Build from source
 

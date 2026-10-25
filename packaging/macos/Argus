@@ -3,20 +3,25 @@ set -u
 
 app_root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 binary="$app_root/Contents/MacOS/Argus-bin"
-address="127.0.0.1:8787"
-
+child=0
+stop() {
+	if [ "$child" -ne 0 ]; then
+		kill -TERM "$child" 2>/dev/null || true
+		wait "$child" 2>/dev/null || true
+	fi
+	exit 0
+}
+trap stop INT TERM
 "$binary" "$@" &
 child=$!
-
-if command -v curl >/dev/null 2>&1; then
-	for _ in $(seq 1 60); do
-		if curl -fsS "http://$address/api/health" >/dev/null 2>&1; then
-			open "http://$address" >/dev/null 2>&1 || true
-			break
-		fi
-		kill -0 "$child" 2>/dev/null || break
-		sleep 1
-	done
-fi
-
 wait "$child"
+code=$?
+if [ "$code" -ne 0 ]; then
+	log_path="${ARGUS_HOME:-$HOME/Library/Application Support/Argus}/startup.log"
+	/usr/bin/osascript - "$log_path" <<'APPLESCRIPT'
+on run argv
+  display alert "Argus 启动失败" message ("请查看启动日志：" & item 1 of argv) as critical
+end run
+APPLESCRIPT
+fi
+exit "$code"

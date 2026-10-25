@@ -88,9 +88,23 @@ Windows 安装包和便携 ZIP 均包含数据库运行文件，首次启动无�
 
 Linux 当前提供便携 ZIP；它不修改系统包管理器，也不要求安装 PostgreSQL 或 Docker。需要桌面快捷方式时，可以把 `start.sh` 添加到发行版的应用启动器中。
 
+`start.sh` 不需要启动参数：数据库运行文件已经随包提供，数据和日志自动写入当前用户目录；桌面环境下会尝试打开默认浏览器。安装目录可以只读。
+
+### 可选 Docker 运行
+
+桌面安装不依赖 Docker。选择容器运行时，下载本仓库的 `docker-compose.yml` 后执行：
+
+```bash
+docker compose up -d
+```
+
+默认不需要 `.env`、单独的 PostgreSQL 容器、数据库密码、手动创建用户或调整目录权限。镜像已内置普通用户、数据库运行文件和健康检查，Compose 自动创建持久化数据卷，并仅向本机发布端口。打开 <http://127.0.0.1:8787>，在界面中填写自己的模型服务配置即可。
+
 ## 数据库与数据目录
 
 Argus 面向普通用户提供自包含运行方式：不需要用户安装 Docker、创建 PostgreSQL、填写数据库密码或手动配置 DSN。应用会在用户数据目录准备并复用本地运行数据。
+
+Windows、macOS 和 Linux 发布包均包含对应架构的数据库运行文件，首次启动不再临时联网下载数据库。
 
 - macOS：`~/Library/Application Support/Argus`
 - Linux：`~/.local/share/Argus`
@@ -123,7 +137,6 @@ Argus 面向普通用户提供自包含运行方式：不需要用户安装 Dock
 ```bash
 git clone https://github.com/shuhuNB515/Argus.git
 cd Argus
-cp .env.example .env
 ./dev.sh
 ```
 
